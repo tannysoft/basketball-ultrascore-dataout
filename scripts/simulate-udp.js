@@ -25,17 +25,43 @@ function buildGeneralDataPacket() {
 
     // Payload (18 bytes)
     let offset = 7;
-    buf.writeUInt8(1, offset++); // Period 1
+
+    // Cycle periods 0-15
+    const period = Math.floor((Date.now() / 5000) % 16);
+    buf.writeUInt8(period, offset++); // Period
+
     buf.writeUInt8(0x11, offset++); // Timer Status (Running)
 
-    // Match Timer 09:56.7 -> Min 9, Sec 56, Tenth 7
-    buf.writeUInt8(9, offset++);
-    buf.writeUInt8(56, offset++);
-    buf.writeUInt8(7, offset++);
+    // Match Timer
+    // Case 1: 09:56.7 -> Min 9, Sec 56, Tenth 7
+    // Case 2: 00:59.5 -> Min 0, Sec 59, Tenth 5
+    // We can alternate based on timestamp or random
 
-    // Shot Clock 20.7 -> Sec 20, Tenth 7
-    buf.writeUInt8(20, offset++);
-    buf.writeUInt8(7, offset++);
+    if (Date.now() % 4000 < 2000) {
+        // > 1 Min
+        buf.writeUInt8(9, offset++);
+        buf.writeUInt8(56, offset++);
+        buf.writeUInt8(7, offset++);
+    } else {
+        // < 1 Min
+        buf.writeUInt8(0, offset++);
+        buf.writeUInt8(59, offset++);
+        buf.writeUInt8(5, offset++);
+    }
+
+    // Shot Clock
+    // Case 1: 20.7 -> Should be "21" (20 + 0.7 = 20.7 rounded is 21)
+    // Case 2: 4.3 -> Should be "4.3"
+
+    if (Date.now() % 4000 < 2000) {
+        // > 5 Sec
+        buf.writeUInt8(20, offset++);
+        buf.writeUInt8(7, offset++); // 20.7 -> 21
+    } else {
+        // < 5 Sec
+        buf.writeUInt8(4, offset++);
+        buf.writeUInt8(3, offset++); // 4.3 -> 4.3
+    }
 
     buf.writeUInt8(0, offset++); // Timeout
     buf.writeUInt8(0, offset++); // Rsv
